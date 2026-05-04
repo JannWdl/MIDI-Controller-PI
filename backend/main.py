@@ -196,12 +196,15 @@ class MIDIController:
 
 	def init_bluetooth_midi(self):
 		"""Bluetooth MIDI initialisieren (Optional - aktuell deaktiviert)"""
-		if not self.config['connections']['bluetooth']['enabled']:
-			return False
-
-		# Bluetooth MIDI wird in zukünftiger Version implementiert
+		# Bluetooth MIDI ist aktuell nicht implementiert
 		connection_status['bluetooth'] = False
-		logger.info("Bluetooth MIDI nicht verfügbar")
+
+		if self.config['connections']['bluetooth']['enabled']:
+			logger.warning("Bluetooth MIDI ist aktiviert, aber noch nicht implementiert")
+			logger.info("Für Bluetooth MIDI siehe: https://github.com/oxesoft/bluez-alsa")
+		else:
+			logger.debug("Bluetooth MIDI deaktiviert")
+
 		return False
 
 	def init_gpio_buttons(self):

@@ -6,12 +6,15 @@ Ein GPIO-basiertes MIDI-Footswitch-Pedal für Raspberry Pi mit Unterstützung f�
 
 - 🎸 **GPIO-Footswitches** - Bis zu 8 (erweiterbar auf 19) physische Fußschalter
 - 🔌 **USB MIDI** - Direkte Verbindung zu DAWs und Effektgeräten
-- 📡 **WiFi MIDI** - Drahtlose MIDI-Übertragung (RTP-MIDI über UDP)
+- 📡 **WiFi MIDI** - Drahtlose MIDI-Übertragung (UDP-basiert) → [Anleitung](WIFI_MIDI.md)
+- 🧪 **GPIO Test-Tool** - Live-Monitoring der Footswitches im Browser
 - 🌐 **Web-Interface** - Konfiguration über Browser
 - ⚙️ **Frei konfigurierbar** - Jeder Footswitch individuell einstellbar
 - 📝 **Note & CC Messages** - Volle MIDI-Unterstützung
 - 🚀 **Auto-Start** - Systemd Service Integration
 - 🔧 **GPIO-Pin-Mapping** - Flexible Pin-Zuweisung im Web-Interface
+
+> **Bluetooth MIDI**: Aktuell nicht implementiert → [Status & Alternativen](BLUETOOTH.md)
 
 ## Hardware
 

@@ -855,7 +855,12 @@
 
             // GPIO-Test Tab: Pin-Status aktualisieren
             if (tabName === 'test') {
-                renderGPIOPinStatus();
+                // Config neu laden falls nicht vorhanden
+                if (!config || !config.buttons) {
+                    loadConfig().then(() => renderGPIOPinStatus());
+                } else {
+                    renderGPIOPinStatus();
+                }
             }
         }
 
@@ -865,25 +870,39 @@
 
         function renderGPIOPinStatus() {
             const container = document.getElementById('gpio-pin-status');
-            if (!container) return;
+            if (!container) {
+                console.error('gpio-pin-status container nicht gefunden');
+                return;
+            }
+
+            if (!config || !config.buttons) {
+                console.error('Config nicht geladen');
+                container.innerHTML = '<div style="padding: 20px; color: #666;">⚠️ Konfiguration wird geladen...</div>';
+                return;
+            }
 
             container.innerHTML = '';
 
-            config.buttons.forEach(button => {
-                if (button.gpio_pin !== undefined && button.enabled) {
-                    const pinDiv = document.createElement('div');
-                    pinDiv.style.cssText = 'padding: 10px; background: white; border-radius: 8px; border-left: 4px solid ' + button.color;
-                    pinDiv.innerHTML = `
-                        <div style="font-weight: 600; margin-bottom: 5px;">${button.name}</div>
-                        <div style="font-size: 12px; color: #666;">
-                            GPIO ${button.gpio_pin} → ${button.type === 'note' ? 'Note' : 'CC'} ${button.note}
-                        </div>
-                        <div id="pin-status-${button.gpio_pin}" style="font-size: 11px; color: #10b981; margin-top: 5px;">
-                            ⚪ Bereit
-                        </div>
-                    `;
-                    container.appendChild(pinDiv);
-                }
+            const activeButtons = config.buttons.filter(b => b.gpio_pin !== undefined && b.enabled);
+
+            if (activeButtons.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; color: #666;">⚠️ Keine aktiven GPIO-Buttons konfiguriert</div>';
+                return;
+            }
+
+            activeButtons.forEach(button => {
+                const pinDiv = document.createElement('div');
+                pinDiv.style.cssText = 'padding: 10px; background: white; border-radius: 8px; border-left: 4px solid ' + (button.color || '#3b82f6');
+                pinDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 5px;">${button.name}</div>
+                    <div style="font-size: 12px; color: #666;">
+                        GPIO ${button.gpio_pin} → ${button.type === 'note' ? 'Note' : 'CC'} ${button.note}
+                    </div>
+                    <div id="pin-status-${button.gpio_pin}" style="font-size: 11px; color: #10b981; margin-top: 5px;">
+                        ⚪ Bereit
+                    </div>
+                `;
+                container.appendChild(pinDiv);
             });
         }
 
