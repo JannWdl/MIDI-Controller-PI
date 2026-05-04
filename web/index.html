@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-dot.active {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .tabs {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .tab-buttons {
+            display: flex;
+            background: #f5f5f5;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .tab-button {
+            padding: 12px 30px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Controller Tab */
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .midi-button {
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .midi-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .midi-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .midi-button:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .button-label {
+            position: relative;
+            z-index: 1;
+        }
+
+        .button-note {
+            position: relative;
+            z-index: 1;
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* Config Tab */
+        .config-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .config-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .config-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .config-input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .config-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .button-config-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .button-config-item {
+            display: grid;
+            grid-template-columns: 150px 200px 100px 150px 100px;
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .button-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .config-row {
+                grid-template-columns: 1fr;
+            }
+
+            .button-config-item {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-buttons {
+                flex-direction: column;
+            }
+
+            .button-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+        }
+
+        .info-box {
+            background: #e0e7ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎹 MIDI Controller</h1>
+            <div class="status-indicators">
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-usb"></div>
+                    <span>USB</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-wifi"></div>
+                    <span>WiFi</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-bluetooth"></div>
+                    <span>Bluetooth</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('controller')">Controller</button>
+                <button class="tab-button" onclick="switchTab('config')">Konfiguration</button>
+                <button class="tab-button" onclick="switchTab('connections')">Verbindungen</button>
+                <button class="tab-button" onclick="switchTab('about')">Info</button>
+            </div>
+
+            <!-- Controller Tab -->
+            <div class="tab-content active" id="tab-controller">
+                <h2 style="margin-bottom: 20px;">MIDI Buttons</h2>
+                <div class="button-grid" id="button-grid">
+                    <!-- Buttons werden dynamisch geladen -->
+                </div>
+            </div>
+
+            <!-- Config Tab -->
+            <div class="tab-content" id="tab-config">
+                <h2 style="margin-bottom: 20px;">Button-Konfiguration</h2>
+
+                <div class="config-section">
+                    <h3>MIDI Einstellungen</h3>
+                    <div class="config-row">
+                        <label class="config-label">MIDI Kanal:</label>
+                        <input type="number" class="config-input" id="midi-channel" min="1" max="16" value="1">
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Velocity:</label>
+                        <input type="number" class="config-input" id="midi-velocity" min="0" max="127" value="127">
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Button Belegung</h3>
+                    <div class="button-config-grid" id="button-config-grid">
+                        <!-- Button-Konfiguration wird dynamisch geladen -->
+                    </div>
+                </div>
+
+                <div class="button-actions">
+                    <button class="btn btn-primary" onclick="saveConfig()">💾 Speichern</button>
+                    <button class="btn btn-danger" onclick="resetConfig()">🔄 Zurücksetzen</button>
+                </div>
+            </div>
+
+            <!-- Connections Tab -->
+            <div class="tab-content" id="tab-connections">
+                <h2 style="margin-bottom: 20px;">Verbindungseinstellungen</h2>
+
+                <div class="config-section">
+                    <h3>USB MIDI</h3>
+                    <div class="config-row">
+                        <label class="config-label">Aktiviert:</label>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="usb-enabled" checked>
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Port:</label>
+                        <select class="config-input" id="usb-port">
+                            <option value="auto">Automatisch</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>WiFi MIDI (RTP-MIDI)</h3>
+                    <div class="config-row">
+                        <label class="config-label">Aktiviert:</label>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="wifi-enabled" checked>
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Host:</label>
+                        <input type="text" class="config-input" id="wifi-host" value="0.0.0.0">
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Port:</label>
+                        <input type="number" class="config-input" id="wifi-port" value="5004">
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Bluetooth MIDI</h3>
+                    <div class="config-row">
+                        <label class="config-label">Aktiviert:</label>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="bluetooth-enabled">
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Gerätename:</label>
+                        <input type="text" class="config-input" id="bluetooth-device-name" value="MIDI-Controller">
+                    </div>
+                </div>
+
+                <div class="button-actions">
+                    <button class="btn btn-primary" onclick="saveConfig()">💾 Speichern</button>
+                    <button class="btn btn-success" onclick="restartController()">🔄 Neu starten</button>
+                </div>
+            </div>
+
+            <!-- About Tab -->
+            <div class="tab-content" id="tab-about">
+                <h2 style="margin-bottom: 20px;">Über MIDI Controller</h2>
+
+                <div class="info-box">
+                    <h4>Version 1.0</h4>
+                    <p>MIDI Controller für Raspberry Pi mit USB, WiFi und Bluetooth Unterstützung</p>
+                </div>
+
+                <div class="config-section">
+                    <h3>Features</h3>
+                    <ul style="line-height: 1.8; margin-left: 20px;">
+                        <li>✅ USB MIDI Unterstützung</li>
+                        <li>✅ WiFi MIDI (RTP-MIDI über UDP)</li>
+                        <li>✅ Bluetooth MIDI</li>
+                        <li>✅ 16 konfigurierbare Buttons</li>
+                        <li>✅ Web-basierte Konfiguration</li>
+                        <li>✅ Note und CC Messages</li>
+                        <li>✅ Echtzeit Status-Anzeige</li>
+                    </ul>
+                </div>
+
+                <div class="config-section">
+                    <h3>Systeminfo</h3>
+                    <div class="config-row">
+                        <label class="config-label">Status:</label>
+                        <span id="system-status">Läuft</span>
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Verfügbare Ports:</label>
+                        <span id="available-ports">Lädt...</span>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Netzwerk-Zugriff</h3>
+                    <p style="line-height: 1.8;">
+                        Das Web-Interface ist erreichbar über:<br>
+                        • <strong>http://[PI-IP-Adresse]:5000</strong><br>
+                        • <strong>http://[hostname].local:5000</strong><br>
+                        <br>
+                        WiFi MIDI sendet auf Port <strong>5004 (UDP)</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let config = null;
+        let pressedButtons = new Set();
+
+        // Initialisierung
+        async function init() {
+            await loadConfig();
+            await updateStatus();
+            renderButtons();
+            renderButtonConfig();
+
+            // Status-Update alle 2 Sekunden
+            setInterval(updateStatus, 2000);
+        }
+
+        // Konfiguration laden
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                config = await response.json();
+
+                // UI aktualisieren
+                document.getElementById('midi-channel').value = config.midi.channel;
+                document.getElementById('midi-velocity').value = config.midi.velocity;
+
+                document.getElementById('usb-enabled').checked = config.connections.usb.enabled;
+                document.getElementById('usb-port').value = config.connections.usb.port;
+
+                document.getElementById('wifi-enabled').checked = config.connections.wifi.enabled;
+                document.getElementById('wifi-host').value = config.connections.wifi.host;
+                document.getElementById('wifi-port').value = config.connections.wifi.port;
+
+                document.getElementById('bluetooth-enabled').checked = config.connections.bluetooth.enabled;
+                document.getElementById('bluetooth-device-name').value = config.connections.bluetooth.device_name;
+
+            } catch (error) {
+                showNotification('Fehler beim Laden der Konfiguration', 'error');
+            }
+        }
+
+        // Status aktualisieren
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+
+                // Status-Dots aktualisieren
+                updateStatusDot('status-usb', status.connections.usb);
+                updateStatusDot('status-wifi', status.connections.wifi);
+                updateStatusDot('status-bluetooth', status.connections.bluetooth);
+
+                // USB Ports aktualisieren
+                const portSelect = document.getElementById('usb-port');
+                portSelect.innerHTML = '<option value="auto">Automatisch</option>';
+                status.available_ports.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    portSelect.appendChild(option);
+                });
+
+                // System-Info aktualisieren
+                document.getElementById('system-status').textContent = status.running ? 'Läuft' : 'Gestoppt';
+                document.getElementById('available-ports').textContent = status.available_ports.join(', ') || 'Keine';
+
+            } catch (error) {
+                console.error('Status-Update Fehler:', error);
+            }
+        }
+
+        function updateStatusDot(id, active) {
+            const dot = document.getElementById(id);
+            if (active) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        }
+
+        // Buttons rendern
+        function renderButtons() {
+            const grid = document.getElementById('button-grid');
+            grid.innerHTML = '';
+
+            config.buttons.forEach(button => {
+                const btn = document.createElement('button');
+                btn.className = 'midi-button';
+                btn.style.background = button.color || '#3b82f6';
+                btn.innerHTML = `
+                    <div class="button-label">${button.name}</div>
+                    <div class="button-note">${button.type === 'note' ? 'Note' : 'CC'} ${button.note}</div>
+                `;
+
+                // Touch/Mouse Events
+                btn.addEventListener('mousedown', () => buttonPress(button.id));
+                btn.addEventListener('mouseup', () => buttonRelease(button.id));
+                btn.addEventListener('mouseleave', () => buttonRelease(button.id));
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); buttonPress(button.id); });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); buttonRelease(button.id); });
+
+                grid.appendChild(btn);
+            });
+        }
+
+        // Button-Konfiguration rendern
+        function renderButtonConfig() {
+            const grid = document.getElementById('button-config-grid');
+            grid.innerHTML = '';
+
+            config.buttons.forEach((button, index) => {
+                const item = document.createElement('div');
+                item.className = 'button-config-item';
+                item.innerHTML = `
+                    <input type="text" class="config-input" value="${button.name}" 
+                           onchange="updateButtonConfig(${index}, 'name', this.value)">
+                    <select class="config-input" onchange="updateButtonConfig(${index}, 'type', this.value)">
+                        <option value="note" ${button.type === 'note' ? 'selected' : ''}>Note</option>
+                        <option value="cc" ${button.type === 'cc' ? 'selected' : ''}>Control Change</option>
+                    </select>
+                    <input type="number" class="config-input" value="${button.note}" min="0" max="127"
+                           onchange="updateButtonConfig(${index}, 'note', parseInt(this.value))">
+                    <input type="color" class="config-input" value="${button.color || '#3b82f6'}"
+                           onchange="updateButtonConfig(${index}, 'color', this.value)">
+                    <span style="text-align: center;">Button ${index + 1}</span>
+                `;
+                grid.appendChild(item);
+            });
+        }
+
+        function updateButtonConfig(index, field, value) {
+            config.buttons[index][field] = value;
+        }
+
+        // Button Events
+        async function buttonPress(buttonId) {
+            if (pressedButtons.has(buttonId)) return;
+            pressedButtons.add(buttonId);
+
+            try {
+                await fetch('/api/button/press', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ button_id: buttonId })
+                });
+            } catch (error) {
+                console.error('Button Press Fehler:', error);
+            }
+        }
+
+        async function buttonRelease(buttonId) {
+            if (!pressedButtons.has(buttonId)) return;
+            pressedButtons.delete(buttonId);
+
+            try {
+                await fetch('/api/button/release', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ button_id: buttonId })
+                });
+            } catch (error) {
+                console.error('Button Release Fehler:', error);
+            }
+        }
+
+        // Konfiguration speichern
+        async function saveConfig() {
+            // Werte aus UI in config übernehmen
+            config.midi.channel = parseInt(document.getElementById('midi-channel').value);
+            config.midi.velocity = parseInt(document.getElementById('midi-velocity').value);
+
+            config.connections.usb.enabled = document.getElementById('usb-enabled').checked;
+            config.connections.usb.port = document.getElementById('usb-port').value;
+
+            config.connections.wifi.enabled = document.getElementById('wifi-enabled').checked;
+            config.connections.wifi.host = document.getElementById('wifi-host').value;
+            config.connections.wifi.port = parseInt(document.getElementById('wifi-port').value);
+
+            config.connections.bluetooth.enabled = document.getElementById('bluetooth-enabled').checked;
+            config.connections.bluetooth.device_name = document.getElementById('bluetooth-device-name').value;
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Konfiguration gespeichert und Controller neu gestartet', 'success');
+                    await loadConfig();
+                    renderButtons();
+                    renderButtonConfig();
+                } else {
+                    showNotification('Fehler beim Speichern: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Fehler beim Speichern', 'error');
+            }
+        }
+
+        async function resetConfig() {
+            if (!confirm('Wirklich alle Einstellungen zurücksetzen?')) return;
+
+            // Default-Config erstellen
+            config = {
+                midi: { channel: 1, velocity: 127 },
+                connections: {
+                    usb: { enabled: true, port: 'auto' },
+                    wifi: { enabled: true, host: '0.0.0.0', port: 5004 },
+                    bluetooth: { enabled: false, device_name: 'MIDI-Controller' }
+                },
+                buttons: []
+            };
+
+            for (let i = 0; i < 16; i++) {
+                config.buttons.push({
+                    id: i,
+                    name: `Button ${i+1}`,
+                    note: 60 + i,
+                    type: 'note',
+                    color: '#3b82f6'
+                });
+            }
+
+            await saveConfig();
+        }
+
+        async function restartController() {
+            try {
+                const response = await fetch('/api/restart', { method: 'POST' });
+                const result = await response.json();
+                showNotification('Controller wird neu gestartet...', 'success');
+                setTimeout(updateStatus, 2000);
+            } catch (error) {
+                showNotification('Fehler beim Neustart', 'error');
+            }
+        }
+
+        // Tab-Wechsel
+        function switchTab(tabName) {
+            // Alle Tabs deaktivieren
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Gewählten Tab aktivieren
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+
+        // Benachrichtigung anzeigen
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Bei Laden initialisieren
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
