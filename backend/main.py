@@ -61,6 +61,8 @@ class MIDIController:
 		self.gpio_buttons = {}
 		self.running = False
 		self.lock = threading.Lock()
+		self.gpio_events = []  # Für GPIO-Test
+		self.max_events = 50
 
 	def load_config(self):
 		"""Konfiguration laden"""
@@ -263,6 +265,16 @@ class MIDIController:
 
 		logger.info(f"🔘 {button['name']} gedrückt (GPIO {button.get('gpio_pin')})")
 
+		# Event für Test-Log speichern
+		self.gpio_events.append({
+			'button_id': button_id,
+			'event': 'press',
+			'timestamp': time.time()
+		})
+		# Nur die letzten max_events behalten
+		if len(self.gpio_events) > self.max_events:
+			self.gpio_events = self.gpio_events[-self.max_events:]
+
 		if button['type'] == 'note':
 			self.send_midi_message('note_on', button['note'])
 		elif button['type'] == 'cc':
@@ -275,6 +287,16 @@ class MIDIController:
 			return
 
 		logger.debug(f"🔘 {button['name']} losgelassen")
+
+		# Event für Test-Log speichern
+		self.gpio_events.append({
+			'button_id': button_id,
+			'event': 'release',
+			'timestamp': time.time()
+		})
+		# Nur die letzten max_events behalten
+		if len(self.gpio_events) > self.max_events:
+			self.gpio_events = self.gpio_events[-self.max_events:]
 
 		if button['type'] == 'note':
 			self.send_midi_message('note_off', button['note'])
@@ -487,6 +509,28 @@ def restart_controller():
 		return jsonify({'success': True, 'message': 'Controller neu gestartet'})
 	except Exception as e:
 		logger.error(f"Fehler beim Neustart: {e}")
+		return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/gpio/test/events', methods=['GET'])
+def get_gpio_test_events():
+	"""GPIO Test Events abrufen (für Live-Monitoring)"""
+	try:
+		# Nur Events der letzten 2 Sekunden zurückgeben
+		current_time = time.time()
+		recent_events = [
+			e for e in controller.gpio_events 
+			if current_time - e['timestamp'] < 2.0
+		]
+
+		# Events zurücksetzen nach dem Abrufen
+		controller.gpio_events = []
+
+		return jsonify({
+			'success': True,
+			'events': recent_events
+		})
+	except Exception as e:
+		logger.error(f"Fehler beim Abrufen der GPIO Test Events: {e}")
 		return jsonify({'success': False, 'message': str(e)}), 500
 
 

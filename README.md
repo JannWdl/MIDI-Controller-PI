@@ -104,20 +104,45 @@ sudo systemctl restart midi-controller
 
 ### Über Web-Interface
 
-1. Web-Interface im Browser öffnen
-2. Tab **"Konfiguration"** auswählen
-3. **GPIO Einstellungen**:
+Das Web-Interface bietet 5 Tabs:
+
+#### 🎹 Controller
+- Virtuelle Buttons zum Testen der MIDI-Verbindung
+- Simuliert Footswitch-Drücke (nützlich ohne Hardware)
+
+#### ⚙️ Konfiguration
+1. **MIDI Grundeinstellungen**:
+   - Kanal (1-16)
+   - Velocity (0-127)
+2. **GPIO Einstellungen**:
    - GPIO aktiviert: ✓
    - Pull-Up Widerstand: ✓ (Taster gegen GND)
    - Bounce Time: 0.05s (bei Prellen erhöhen)
-4. **Footswitch Belegung** anpassen:
+3. **Footswitch Belegung** anpassen:
    - Name ändern (z.B. "Distortion", "Delay")
    - GPIO Pin zuweisen (0-27)
    - MIDI Note/CC Nummer einstellen (0-127)
    - Typ wählen (Note oder Control Change)
    - Farbe anpassen (nur Web-Interface)
    - Footswitch aktivieren/deaktivieren
-5. **Speichern** klicken → Service startet neu
+4. **Speichern** klicken → Service startet neu
+
+#### 🧪 GPIO Test
+- **Live-Monitoring**: Zeigt in Echtzeit, welche Footswitches gedrückt werden
+- **Event-Log**: Detaillierte Zeitstempel für jeden Button-Press/Release
+- **Pin-Status**: Übersicht aller konfigurierten GPIO-Pins
+- **Verwendung**:
+  1. "Test starten" klicken
+  2. Footswitches drücken
+  3. Events werden live im Log angezeigt
+  4. Perfekt zum Testen der Verkabelung!
+
+#### 🔌 Verbindungen
+- USB MIDI, WiFi MIDI und Bluetooth Einstellungen
+- Port automatisch oder manuell auswählen
+
+#### ℹ️ Info
+- Versionsinformationen und Features
 
 ### Verbindungseinstellungen
 

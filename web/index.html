@@ -433,6 +433,58 @@
                 </div>
             </div>
 
+            <!-- GPIO Test Tab -->
+            <div class="tab-content" id="tab-test">
+                <h2 style="margin-bottom: 20px;">🧪 GPIO Buttons testen</h2>
+
+                <div class="config-section">
+                    <h3>Live-Status</h3>
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Drücke einen physischen Footswitch-Taster. Der Status wird hier in Echtzeit angezeigt.
+                    </p>
+
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div class="status-indicator">
+                            <div class="status-dot" id="test-status-dot"></div>
+                            <span id="test-status-text">Bereit zum Testen</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="startGPIOTest()">▶️ Test starten</button>
+                        <button class="btn btn-danger" onclick="stopGPIOTest()">⏹️ Test stoppen</button>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>GPIO Button Ereignisse</h3>
+                    <div id="gpio-test-log" style="
+                        background: #1e1e1e;
+                        color: #d4d4d4;
+                        padding: 20px;
+                        border-radius: 8px;
+                        font-family: 'Courier New', monospace;
+                        font-size: 14px;
+                        max-height: 400px;
+                        overflow-y: auto;
+                        line-height: 1.6;
+                    ">
+                        <div style="color: #888;">Warte auf Button-Ereignisse...</div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-primary" onclick="clearTestLog()">🗑️ Log löschen</button>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Pin-Übersicht</h3>
+                    <div id="gpio-pin-status" style="
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                        gap: 10px;
+                    ">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Connections Tab -->
             <div class="tab-content" id="tab-connections">
                 <h2 style="margin-bottom: 20px;">Verbindungseinstellungen</h2>
@@ -800,6 +852,146 @@
             // Gewählten Tab aktivieren
             event.target.classList.add('active');
             document.getElementById('tab-' + tabName).classList.add('active');
+
+            // GPIO-Test Tab: Pin-Status aktualisieren
+            if (tabName === 'test') {
+                renderGPIOPinStatus();
+            }
+        }
+
+        // GPIO Test Funktionen
+        let gpioTestInterval = null;
+        let lastGPIOEvents = [];
+
+        function renderGPIOPinStatus() {
+            const container = document.getElementById('gpio-pin-status');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            config.buttons.forEach(button => {
+                if (button.gpio_pin !== undefined && button.enabled) {
+                    const pinDiv = document.createElement('div');
+                    pinDiv.style.cssText = 'padding: 10px; background: white; border-radius: 8px; border-left: 4px solid ' + button.color;
+                    pinDiv.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 5px;">${button.name}</div>
+                        <div style="font-size: 12px; color: #666;">
+                            GPIO ${button.gpio_pin} → ${button.type === 'note' ? 'Note' : 'CC'} ${button.note}
+                        </div>
+                        <div id="pin-status-${button.gpio_pin}" style="font-size: 11px; color: #10b981; margin-top: 5px;">
+                            ⚪ Bereit
+                        </div>
+                    `;
+                    container.appendChild(pinDiv);
+                }
+            });
+        }
+
+        async function startGPIOTest() {
+            if (gpioTestInterval) return;
+
+            const statusDot = document.getElementById('test-status-dot');
+            const statusText = document.getElementById('test-status-text');
+
+            statusDot.classList.add('active');
+            statusText.textContent = 'Test läuft...';
+
+            addTestLog('INFO', '🚀 GPIO Test gestartet');
+            addTestLog('INFO', `Überwache ${config.buttons.filter(b => b.enabled && b.gpio_pin !== undefined).length} aktive Buttons`);
+
+            // Event-Polling alle 100ms
+            gpioTestInterval = setInterval(pollGPIOEvents, 100);
+        }
+
+        function stopGPIOTest() {
+            if (!gpioTestInterval) return;
+
+            clearInterval(gpioTestInterval);
+            gpioTestInterval = null;
+
+            const statusDot = document.getElementById('test-status-dot');
+            const statusText = document.getElementById('test-status-text');
+
+            statusDot.classList.remove('active');
+            statusText.textContent = 'Test gestoppt';
+
+            addTestLog('INFO', '⏹️ GPIO Test gestoppt');
+        }
+
+        async function pollGPIOEvents() {
+            try {
+                const response = await fetch('/api/gpio/test/events');
+                const data = await response.json();
+
+                if (data.events && data.events.length > 0) {
+                    data.events.forEach(event => {
+                        const button = config.buttons.find(b => b.id === event.button_id);
+                        if (!button) return;
+
+                        const eventType = event.event === 'press' ? '⬇️ GEDRÜCKT' : '⬆️ LOSGELASSEN';
+                        const color = event.event === 'press' ? '#10b981' : '#6b7280';
+
+                        addTestLog(
+                            'EVENT',
+                            `${eventType} - ${button.name} (GPIO ${button.gpio_pin}) → ${button.type === 'note' ? 'Note' : 'CC'} ${button.note}`,
+                            color
+                        );
+
+                        // Pin-Status aktualisieren
+                        const pinStatus = document.getElementById(`pin-status-${button.gpio_pin}`);
+                        if (pinStatus) {
+                            pinStatus.textContent = event.event === 'press' ? '🟢 AKTIV' : '⚪ Bereit';
+                            pinStatus.style.color = color;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('GPIO Test Fehler:', error);
+            }
+        }
+
+        function addTestLog(level, message, color = null) {
+            const logContainer = document.getElementById('gpio-test-log');
+            if (!logContainer) return;
+
+            const timestamp = new Date().toLocaleTimeString('de-DE', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+
+            let levelColor = '#888';
+            if (level === 'EVENT') levelColor = color || '#3b82f6';
+            if (level === 'INFO') levelColor = '#6b7280';
+            if (level === 'ERROR') levelColor = '#ef4444';
+
+            logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> <span style="color: ${levelColor}; font-weight: 600;">${level}</span> ${message}`;
+
+            // Erste "Warte auf..."-Nachricht entfernen
+            const placeholder = logContainer.querySelector('div[style*="color: #888"]');
+            if (placeholder && placeholder.textContent.includes('Warte auf')) {
+                placeholder.remove();
+            }
+
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+
+            // Maximal 100 Einträge
+            while (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+
+        function clearTestLog() {
+            const logContainer = document.getElementById('gpio-test-log');
+            if (!logContainer) return;
+
+            logContainer.innerHTML = '<div style="color: #888;">Log gelöscht - Warte auf Button-Ereignisse...</div>';
         }
 
         // Benachrichtigung anzeigen

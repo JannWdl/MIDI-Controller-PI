@@ -113,7 +113,29 @@ GPIO ----[100nF]---- GND
 
 ## Test
 
-### GPIO-Test ohne Footswitch
+### 🧪 GPIO-Test mit Web-Interface (empfohlen)
+
+Das **GPIO-Test-Tool** im Web-Interface ermöglicht Live-Monitoring der Footswitches:
+
+1. **Web-Interface öffnen**: `http://raspberrypi.local:5000`
+2. Tab **"🧪 GPIO Test"** öffnen
+3. **"▶️ Test starten"** klicken
+4. **Footswitches drücken** - Events werden in Echtzeit angezeigt:
+   ```
+   [14:32:15.123] EVENT ⬇️ GEDRÜCKT - Footswitch 1 (GPIO 17) → Note 60
+   [14:32:15.234] EVENT ⬆️ LOSGELASSEN - Footswitch 1 (GPIO 17) → Note 60
+   ```
+5. **Pin-Status** zeigt den aktuellen Zustand jedes Pins
+6. **"⏹️ Test stoppen"** wenn fertig
+
+**Vorteile:**
+- ✅ Echtzeit-Feedback mit Millisekunden-Zeitstempel
+- ✅ Erkennt Verkabelungsprobleme sofort
+- ✅ Zeigt GPIO-Pin-Zuordnung an
+- ✅ Prellen (Bounce) wird sichtbar gemacht
+- ✅ Keine externe MIDI-Software nötig
+
+### Manueller GPIO-Test (Kommandozeile)
 
 ```bash
 # Pin-Status prüfen
