@@ -26,6 +26,7 @@ apt-get install -y libasound2-dev libjack-dev
 apt-get install -y alsa-utils
 apt-get install -y bluez bluez-tools
 apt-get install -y avahi-daemon avahi-utils
+apt-get install -y python3-rpi.gpio
 
 # Verzeichnisstruktur erstellen
 echo "📁 Erstelle Verzeichnisse..."
@@ -40,7 +41,7 @@ python3 -m venv /opt/midi-controller/venv
 # Python Packages installieren (OHNE pybluez - ist veraltet)
 echo "📦 Installiere Python Packages (kann 5-10 Min dauern)..."
 /opt/midi-controller/venv/bin/pip install --no-cache-dir --upgrade pip
-/opt/midi-controller/venv/bin/pip install --no-cache-dir flask flask-cors mido python-rtmidi gpiozero pigpio
+/opt/midi-controller/venv/bin/pip install --no-cache-dir flask flask-cors mido python-rtmidi gpiozero RPi.GPIO
 
 # Dateien kopieren
 echo "📝 Kopiere Dateien..."
@@ -85,10 +86,9 @@ echo "🔄 Aktiviere Service..."
 systemctl daemon-reload
 systemctl enable midi-controller.service
 
-# pigpiod Service aktivieren (für GPIO)
-echo "🔌 Aktiviere GPIO Service..."
-systemctl enable pigpiod
-systemctl start pigpiod 2>/dev/null || true
+# GPIO-Gruppen und Berechtigungen
+echo "🔌 Setze GPIO-Berechtigungen..."
+usermod -a -G gpio $SUDO_USER 2>/dev/null || true
 
 # MIDI Konfiguration
 echo "🎵 Konfiguriere MIDI..."

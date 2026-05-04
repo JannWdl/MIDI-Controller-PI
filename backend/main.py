@@ -17,7 +17,6 @@ from mido import Message
 # GPIO Import
 try:
 	from gpiozero import Button
-	from gpiozero.pins.pigpio import PiGPIOFactory
 	GPIO_AVAILABLE = True
 except ImportError:
 	GPIO_AVAILABLE = False
