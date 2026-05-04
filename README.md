@@ -58,7 +58,7 @@ cd MIDI-Controller-PI
 
 # Installation ausführen (als root)
 sudo chmod +x install.sh
-sudo ./install.sh
+sudo bash ./install.sh
 
 # System neu starten
 sudo reboot
