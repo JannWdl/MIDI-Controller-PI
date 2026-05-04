@@ -1,16 +1,46 @@
-# MIDI Controller für Raspberry Pi
+# MIDI Footswitch Pedal für Raspberry Pi
 
-Ein vollständiger MIDI-Controller für Raspberry Pi mit Unterstützung für USB, WiFi und Bluetooth MIDI.
+Ein GPIO-basiertes MIDI-Footswitch-Pedal für Raspberry Pi mit Unterstützung für USB und WiFi MIDI. Perfekt für Gitarristen und Musiker, die ihre Effektgeräte oder DAWs per Fußschalter steuern möchten.
 
 ## Features
 
-- ✅ **USB MIDI** - Direkte Verbindung zu DAWs
-- ✅ **WiFi MIDI** - RTP-MIDI über UDP (Port 5004)
-- ✅ **Bluetooth MIDI** - Drahtlose Verbindung
-- ✅ **Web-Interface** - Konfiguration über Browser
-- ✅ **16 Buttons** - Frei konfigurierbar
-- ✅ **Note & CC Messages** - Volle MIDI-Unterstützung
-- ✅ **Auto-Start** - Systemd Service Integration
+- 🎸 **GPIO-Footswitches** - Bis zu 8 (erweiterbar auf 19) physische Fußschalter
+- 🔌 **USB MIDI** - Direkte Verbindung zu DAWs und Effektgeräten
+- 📡 **WiFi MIDI** - Drahtlose MIDI-Übertragung (RTP-MIDI über UDP)
+- 🌐 **Web-Interface** - Konfiguration über Browser
+- ⚙️ **Frei konfigurierbar** - Jeder Footswitch individuell einstellbar
+- 📝 **Note & CC Messages** - Volle MIDI-Unterstützung
+- 🚀 **Auto-Start** - Systemd Service Integration
+- 🔧 **GPIO-Pin-Mapping** - Flexible Pin-Zuweisung im Web-Interface
+
+## Hardware
+
+### Benötigte Komponenten
+
+- **Raspberry Pi** (3/4/5 oder Zero W/2)
+- **Footswitches** (Momentary, NO - Normally Open)
+  - Empfohlen: Boss FS-5U, Behringer FS112 oder vergleichbar
+  - 8 Stück (Standard-Konfiguration)
+- **Kabel** für Verkabelung (Cat5/Cat6 Ethernet-Kabel funktioniert gut)
+- **Optional**: Gehäuse für das Pedal
+- **Optional**: 100nF Kondensatoren (Entstörung)
+
+### Standard GPIO-Pins
+
+| Footswitch | GPIO Pin | Physischer Pin |
+|------------|----------|----------------|
+| 1          | GPIO 17  | Pin 11         |
+| 2          | GPIO 27  | Pin 13         |
+| 3          | GPIO 22  | Pin 15         |
+| 4          | GPIO 23  | Pin 16         |
+| 5          | GPIO 24  | Pin 18         |
+| 6          | GPIO 25  | Pin 22         |
+| 7          | GPIO 5   | Pin 29         |
+| 8          | GPIO 6   | Pin 31         |
+
+**Gemeinsamer Ground (GND)**: Pin 6, 9, 14, 20, 25, 30, 34 oder 39
+
+> 📖 **Detaillierte Verkabelungsanleitung**: Siehe [GPIO_WIRING.md](GPIO_WIRING.md)
 
 ## Installation
 
@@ -35,9 +65,9 @@ sudo reboot
 ```
 
 Das Installations-Skript installiert automatisch:
-- Python 3 und benötigte Packages
+- Python 3 und benötigte Packages (Flask, mido, gpiozero)
 - ALSA MIDI Tools
-- Bluetooth Tools
+- GPIO-Bibliotheken (pigpio)
 - Flask Web-Server
 - Systemd Service
 - mDNS (Avahi) für .local Zugriff
@@ -76,12 +106,18 @@ sudo systemctl restart midi-controller
 
 1. Web-Interface im Browser öffnen
 2. Tab **"Konfiguration"** auswählen
-3. Buttons anpassen:
-   - Name ändern
-   - MIDI Note/CC Nummer einstellen
+3. **GPIO Einstellungen**:
+   - GPIO aktiviert: ✓
+   - Pull-Up Widerstand: ✓ (Taster gegen GND)
+   - Bounce Time: 0.05s (bei Prellen erhöhen)
+4. **Footswitch Belegung** anpassen:
+   - Name ändern (z.B. "Distortion", "Delay")
+   - GPIO Pin zuweisen (0-27)
+   - MIDI Note/CC Nummer einstellen (0-127)
    - Typ wählen (Note oder Control Change)
-   - Farbe anpassen
-4. **Speichern** klicken
+   - Farbe anpassen (nur Web-Interface)
+   - Footswitch aktivieren/deaktivieren
+5. **Speichern** klicken → Service startet neu
 
 ### Verbindungseinstellungen
 
@@ -90,15 +126,64 @@ Im Tab **"Verbindungen"** können Sie konfigurieren:
 #### USB MIDI
 - Port automatisch oder manuell auswählen
 - An/Aus schalten
+- Virtueller MIDI-Port wird automatisch erstellt
 
 #### WiFi MIDI (RTP-MIDI)
 - Host: `0.0.0.0` (alle Interfaces)
 - Port: `5004` (Standard RTP-MIDI)
-- Broadcasts an UDP
+- Broadcasts MIDI-Messages über UDP
 
-#### Bluetooth MIDI
-- Gerätename konfigurieren
-- An/Aus schalten
+## Hardware-Verkabelung
+
+### Einfache Verkabelung (Pull-Up aktiviert)
+
+Jeder Footswitch wird zwischen GPIO-Pin und GND geschaltet:
+
+```
+GPIO Pin ----[Footswitch]---- GND
+```
+
+### Beispiel: 4 Footswitches
+
+```
+Raspberry Pi                  Footswitch-Pedal
+┌─────────────┐              ┌──────────────┐
+│  GPIO 17 ───┼──────────────┼─── Switch 1  │
+│  GPIO 27 ───┼──────────────┼─── Switch 2  │
+│  GPIO 22 ───┼──────────────┼─── Switch 3  │
+│  GPIO 23 ───┼──────────────┼─── Switch 4  │
+│  GND     ───┼──────────────┼─── Common    │
+└─────────────┘              └──────────────┘
+```
+
+> 📖 **Vollständige Verkabelungsanleitung**: [GPIO_WIRING.md](GPIO_WIRING.md)
+
+## Verwendung
+
+### Als Gitarren-Effekt-Controller
+
+**Beispiel-Konfiguration:**
+- Footswitch 1 → CC 20 → Distortion On/Off
+- Footswitch 2 → CC 21 → Delay On/Off
+- Footswitch 3 → CC 22 → Reverb On/Off
+- Footswitch 4 → PC 1-4 → Preset-Wechsel
+
+### Als DAW-Controller (Ableton, Logic, etc.)
+
+**Beispiel-Konfiguration:**
+- Footswitch 1 → Note C → Clip Trigger
+- Footswitch 2 → Note D → Loop Record
+- Footswitch 3 → CC 64 → Sustain
+- Footswitch 4 → Note E → Transport Stop/Start
+
+### Test der Footswitches
+
+```bash
+# Logs live ansehen
+sudo journalctl -u midi-controller -f
+
+# Footswitch drücken → "🔘 Footswitch 1 gedrückt (GPIO 17)" erscheint
+```
 
 ### Manuelle Konfiguration
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MIDI Controller - Hauptprogramm
-Unterstützt MIDI über WiFi und USB
+MIDI Controller Footswitch Pedal - Hauptprogramm
+Unterstützt MIDI über WiFi und USB mit GPIO-Tastern
 """
 
 import json
@@ -13,6 +13,16 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import mido
 from mido import Message
+
+# GPIO Import
+try:
+	from gpiozero import Button
+	from gpiozero.pins.pigpio import PiGPIOFactory
+	GPIO_AVAILABLE = True
+except ImportError:
+	GPIO_AVAILABLE = False
+	logger = logging.getLogger(__name__)
+	logger.warning("GPIO nicht verfügbar - läuft im Simulations-Modus")
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -40,7 +50,7 @@ connection_status = {
 
 
 class MIDIController:
-	"""Hauptklasse für MIDI Controller"""
+	"""Hauptklasse für MIDI Controller mit GPIO-Footswitches"""
 
 	def __init__(self):
 		self.config = self.load_config()
@@ -49,6 +59,7 @@ class MIDIController:
 			'wifi': None,
 			'bluetooth': None
 		}
+		self.gpio_buttons = {}
 		self.running = False
 		self.lock = threading.Lock()
 
@@ -89,17 +100,25 @@ class MIDIController:
 					'device_name': 'MIDI-Controller'
 				}
 			},
-			'buttons': []
+			'buttons': [],
+			'gpio': {
+				'enabled': True,
+				'pull_up': True,
+				'bounce_time': 0.05
+			}
 		}
 
-		# 16 Standard-Buttons erstellen
-		for i in range(16):
+		# 8 Standard-Footswitches mit GPIO-Pins
+		gpio_pins = [17, 27, 22, 23, 24, 25, 5, 6]  # Standard GPIO-Pins
+		for i in range(8):
 			config['buttons'].append({
 				'id': i,
-				'name': f'Button {i+1}',
+				'name': f'Footswitch {i+1}',
+				'gpio_pin': gpio_pins[i],
 				'note': 60 + i,
 				'type': 'note',
-				'color': '#3b82f6'
+				'color': '#3b82f6',
+				'enabled': True
 			})
 
 		self.save_config(config)
@@ -184,6 +203,85 @@ class MIDIController:
 		logger.info("Bluetooth MIDI nicht verfügbar")
 		return False
 
+	def init_gpio_buttons(self):
+		"""GPIO Footswitches initialisieren"""
+		if not GPIO_AVAILABLE:
+			logger.warning("GPIO nicht verfügbar - Footswitches deaktiviert")
+			return False
+
+		if not self.config.get('gpio', {}).get('enabled', True):
+			logger.info("GPIO deaktiviert in Konfiguration")
+			return False
+
+		try:
+			# Alte Buttons cleanup
+			for btn in self.gpio_buttons.values():
+				btn.close()
+			self.gpio_buttons.clear()
+
+			# GPIO-Buttons initialisieren
+			pull_up = self.config.get('gpio', {}).get('pull_up', True)
+			bounce_time = self.config.get('gpio', {}).get('bounce_time', 0.05)
+
+			for button_config in self.config['buttons']:
+				if not button_config.get('enabled', True):
+					continue
+
+				gpio_pin = button_config.get('gpio_pin')
+				if gpio_pin is None:
+					continue
+
+				try:
+					btn = Button(
+						gpio_pin,
+						pull_up=pull_up,
+						bounce_time=bounce_time
+					)
+
+					# Event-Handler
+					button_id = button_config['id']
+					btn.when_pressed = lambda bid=button_id: self.handle_button_press(bid)
+					btn.when_released = lambda bid=button_id: self.handle_button_release(bid)
+
+					self.gpio_buttons[button_id] = btn
+					logger.info(f"GPIO Pin {gpio_pin} → {button_config['name']}")
+
+				except Exception as e:
+					logger.error(f"GPIO Pin {gpio_pin} Fehler: {e}")
+
+			logger.info(f"✅ {len(self.gpio_buttons)} Footswitches initialisiert")
+			return True
+
+		except Exception as e:
+			logger.error(f"GPIO Initialisierung Fehler: {e}")
+			return False
+
+	def handle_button_press(self, button_id):
+		"""GPIO Button wurde gedrückt"""
+		button = next((b for b in self.config['buttons'] if b['id'] == button_id), None)
+		if not button:
+			return
+
+		logger.info(f"🔘 {button['name']} gedrückt (GPIO {button.get('gpio_pin')})")
+
+		if button['type'] == 'note':
+			self.send_midi_message('note_on', button['note'])
+		elif button['type'] == 'cc':
+			self.send_midi_message('cc', button['note'], 127)
+
+	def handle_button_release(self, button_id):
+		"""GPIO Button wurde losgelassen"""
+		button = next((b for b in self.config['buttons'] if b['id'] == button_id), None)
+		if not button:
+			return
+
+		logger.debug(f"🔘 {button['name']} losgelassen")
+
+		if button['type'] == 'note':
+			self.send_midi_message('note_off', button['note'])
+		elif button['type'] == 'cc':
+			self.send_midi_message('cc', button['note'], 0)
+
 	def send_midi_message(self, msg_type, note, velocity=None):
 		"""MIDI Message senden"""
 		if velocity is None:
@@ -227,8 +325,9 @@ class MIDIController:
 		self.init_usb_midi()
 		self.init_wifi_midi()
 		self.init_bluetooth_midi()
+		self.init_gpio_buttons()
 
-		logger.info("MIDI Controller gestartet")
+		logger.info("✅ MIDI Controller gestartet")
 
 	def stop(self):
 		"""Controller stoppen"""
@@ -240,6 +339,14 @@ class MIDIController:
 				self.outputs['usb'].close()
 			if self.outputs['wifi']:
 				self.outputs['wifi'].close()
+
+		# GPIO cleanup
+		for btn in self.gpio_buttons.values():
+			try:
+				btn.close()
+			except:
+				pass
+		self.gpio_buttons.clear()
 
 		logger.info("MIDI Controller gestoppt")
 
@@ -289,7 +396,22 @@ def get_status():
 	return jsonify({
 		'running': controller.running,
 		'connections': connection_status,
-		'available_ports': mido.get_output_names()
+		'available_ports': mido.get_output_names(),
+		'gpio_available': GPIO_AVAILABLE,
+		'gpio_buttons_active': len(controller.gpio_buttons)
+	})
+
+@app.route('/api/gpio/available', methods=['GET'])
+def get_available_gpio():
+	"""Verfügbare GPIO-Pins abrufen"""
+	# Standard GPIO-Pins die für Buttons verwendet werden können
+	available_pins = [2, 3, 4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+	used_pins = [b.get('gpio_pin') for b in controller.config['buttons'] if b.get('gpio_pin') is not None]
+
+	return jsonify({
+		'available': [p for p in available_pins if p not in used_pins],
+		'used': used_pins,
+		'all': available_pins
 	})
 
 @app.route('/api/midi/send', methods=['POST'])

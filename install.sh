@@ -40,7 +40,7 @@ python3 -m venv /opt/midi-controller/venv
 # Python Packages installieren (OHNE pybluez - ist veraltet)
 echo "📦 Installiere Python Packages (kann 5-10 Min dauern)..."
 /opt/midi-controller/venv/bin/pip install --no-cache-dir --upgrade pip
-/opt/midi-controller/venv/bin/pip install --no-cache-dir flask flask-cors mido python-rtmidi
+/opt/midi-controller/venv/bin/pip install --no-cache-dir flask flask-cors mido python-rtmidi gpiozero pigpio
 
 # Dateien kopieren
 echo "📝 Kopiere Dateien..."
@@ -84,6 +84,11 @@ ENDSERVICE
 echo "🔄 Aktiviere Service..."
 systemctl daemon-reload
 systemctl enable midi-controller.service
+
+# pigpiod Service aktivieren (für GPIO)
+echo "🔌 Aktiviere GPIO Service..."
+systemctl enable pigpiod
+systemctl start pigpiod 2>/dev/null || true
 
 # MIDI Konfiguration
 echo "🎵 Konfiguriere MIDI..."

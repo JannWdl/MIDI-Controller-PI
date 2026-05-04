@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIDI Controller</title>
+    <title>MIDI Footswitch Pedal</title>
     <style>
         * {
             margin: 0;
@@ -350,7 +350,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎹 MIDI Controller</h1>
+            <h1>🎸 MIDI Footswitch Pedal</h1>
             <div class="status-indicators">
                 <div class="status-indicator">
                     <div class="status-dot" id="status-usb"></div>
@@ -400,7 +400,28 @@
                 </div>
 
                 <div class="config-section">
-                    <h3>Button Belegung</h3>
+                    <h3>GPIO Einstellungen</h3>
+                    <div class="config-row">
+                        <label class="config-label">GPIO aktiviert:</label>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="gpio-enabled" checked>
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Pull-Up Widerstand:</label>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="gpio-pullup" checked>
+                            <span style="font-size: 12px; color: #666;">Taster gegen GND schalten</span>
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label class="config-label">Bounce Time (s):</label>
+                        <input type="number" class="config-input" id="gpio-bounce" min="0" max="1" step="0.01" value="0.05">
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Footswitch Belegung</h3>
                     <div class="button-config-grid" id="button-config-grid">
                         <!-- Button-Konfiguration wird dynamisch geladen -->
                     </div>
@@ -635,6 +656,8 @@
                 item.innerHTML = `
                     <input type="text" class="config-input" value="${button.name}" 
                            onchange="updateButtonConfig(${index}, 'name', this.value)">
+                    <input type="number" class="config-input" value="${button.gpio_pin || 0}" min="0" max="27" placeholder="GPIO Pin"
+                           onchange="updateButtonConfig(${index}, 'gpio_pin', parseInt(this.value))" title="GPIO Pin Nummer">
                     <select class="config-input" onchange="updateButtonConfig(${index}, 'type', this.value)">
                         <option value="note" ${button.type === 'note' ? 'selected' : ''}>Note</option>
                         <option value="cc" ${button.type === 'cc' ? 'selected' : ''}>Control Change</option>
@@ -643,7 +666,11 @@
                            onchange="updateButtonConfig(${index}, 'note', parseInt(this.value))">
                     <input type="color" class="config-input" value="${button.color || '#3b82f6'}"
                            onchange="updateButtonConfig(${index}, 'color', this.value)">
-                    <span style="text-align: center;">Button ${index + 1}</span>
+                    <div class="checkbox-container">
+                        <input type="checkbox" ${button.enabled !== false ? 'checked' : ''}
+                               onchange="updateButtonConfig(${index}, 'enabled', this.checked)">
+                        <span style="font-size: 12px;">Aktiv</span>
+                    </div>
                 `;
                 grid.appendChild(item);
             });
@@ -689,6 +716,11 @@
             // Werte aus UI in config übernehmen
             config.midi.channel = parseInt(document.getElementById('midi-channel').value);
             config.midi.velocity = parseInt(document.getElementById('midi-velocity').value);
+
+            config.gpio = config.gpio || {};
+            config.gpio.enabled = document.getElementById('gpio-enabled').checked;
+            config.gpio.pull_up = document.getElementById('gpio-pullup').checked;
+            config.gpio.bounce_time = parseFloat(document.getElementById('gpio-bounce').value);
 
             config.connections.usb.enabled = document.getElementById('usb-enabled').checked;
             config.connections.usb.port = document.getElementById('usb-port').value;

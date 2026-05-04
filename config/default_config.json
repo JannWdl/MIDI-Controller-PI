@@ -1,0 +1,19 @@
+﻿{
+  "midi": {"channel": 1, "velocity": 127},
+  "connections": {
+    "usb": {"enabled": true, "port": "auto"},
+    "wifi": {"enabled": true, "host": "0.0.0.0", "port": 5004},
+    "bluetooth": {"enabled": false, "device_name": "MIDI-Footswitch"}
+  },
+  "gpio": {"enabled": true, "pull_up": true, "bounce_time": 0.05},
+  "buttons": [
+    {"id": 0, "name": "Footswitch 1", "gpio_pin": 17, "note": 60, "type": "note", "color": "#3b82f6", "enabled": true},
+    {"id": 1, "name": "Footswitch 2", "gpio_pin": 27, "note": 61, "type": "note", "color": "#3b82f6", "enabled": true},
+    {"id": 2, "name": "Footswitch 3", "gpio_pin": 22, "note": 62, "type": "note", "color": "#10b981", "enabled": true},
+    {"id": 3, "name": "Footswitch 4", "gpio_pin": 23, "note": 63, "type": "note", "color": "#10b981", "enabled": true},
+    {"id": 4, "name": "Footswitch 5", "gpio_pin": 24, "note": 64, "type": "note", "color": "#f59e0b", "enabled": true},
+    {"id": 5, "name": "Footswitch 6", "gpio_pin": 25, "note": 65, "type": "note", "color": "#f59e0b", "enabled": true},
+    {"id": 6, "name": "Footswitch 7", "gpio_pin": 5, "note": 66, "type": "cc", "color": "#ef4444", "enabled": true},
+    {"id": 7, "name": "Footswitch 8", "gpio_pin": 6, "note": 67, "type": "cc", "color": "#ef4444", "enabled": true}
+  ]
+}
