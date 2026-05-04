@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MIDI Controller - Hauptprogramm
-Unterstützt MIDI über WiFi, Bluetooth und USB
+Unterstützt MIDI über WiFi und USB
 """
 
 import json
@@ -9,7 +9,7 @@ import os
 import logging
 import threading
 import time
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import mido
 from mido import Message
@@ -17,11 +17,7 @@ from mido import Message
 # Logging konfigurieren
 logging.basicConfig(
 	level=logging.INFO,
-	format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-	handlers=[
-		logging.FileHandler('/opt/midi-controller/logs/midi-controller.log'),
-		logging.StreamHandler()
-	]
+	format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -179,21 +175,14 @@ class MIDIController:
 			return False
 
 	def init_bluetooth_midi(self):
-		"""Bluetooth MIDI initialisieren"""
+		"""Bluetooth MIDI initialisieren (Optional - aktuell deaktiviert)"""
 		if not self.config['connections']['bluetooth']['enabled']:
 			return False
 
-		try:
-			# Bluetooth MIDI (vereinfacht)
-			# In Produktion würde man hier BLE MIDI implementieren
-			connection_status['bluetooth'] = True
-			logger.info("Bluetooth MIDI aktiviert")
-			return True
-
-		except Exception as e:
-			logger.error(f"Bluetooth MIDI Fehler: {e}")
-			connection_status['bluetooth'] = False
-			return False
+		# Bluetooth MIDI wird in zukünftiger Version implementiert
+		connection_status['bluetooth'] = False
+		logger.info("Bluetooth MIDI nicht verfügbar")
+		return False
 
 	def send_midi_message(self, msg_type, note, velocity=None):
 		"""MIDI Message senden"""
